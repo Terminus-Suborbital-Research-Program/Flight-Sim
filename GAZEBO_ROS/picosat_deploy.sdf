@@ -1,0 +1,732 @@
+<?xml version="1.0" ?>
+<!--
+    Microgravity picosat deployment.
+
+    A 6 in radius platform spins about its center at 0.0167 Hz (0.1049 rad/s,
+    1 RPM). It carries two picosats (95.6 x 62.8 x 62.8 mm, 0.5 kg) placed
+    90 deg apart, long axis pointing radially outward, outer face flush with
+    the platform edge.
+
+    The electromagnetic ejectors are modelled as pusher plates on prismatic
+    joints. Each picosat is held to its pusher by a detachable joint, standing
+    in for the electromagnet hold, so it rotates with the platform.
+
+    Publishing to /eject (./eject.sh) drives both pushers outward at 5 in/s
+    (0.127 m/s). 753 ms later, when the trailing face of each picosat reaches
+    the platform edge (95.6 mm of travel), the picosats are released. The
+    pushers run on to their joint limit 5 mm later: stopping them with a command
+    instead can brake a picosat before its release lands. The picosats float
+    freely, keeping the radial speed, the
+    tangential speed of the platform at that radius, and its spin rate.
+
+    Units: SI (m, kg, s).
+-->
+<sdf version="1.10">
+    <world name="microgravity_world">
+        <physics name="1ms" type="ignored">
+            <max_step_size>0.001</max_step_size>
+            <real_time_factor>1.0</real_time_factor>
+        </physics>
+
+        <!-- Microgravity: no gravity, no magnetic field, no atmosphere -->
+        <gravity>0 0 0</gravity>
+        <magnetic_field>0 0 0</magnetic_field>
+
+        <plugin
+            filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics">
+        </plugin>
+        <plugin
+            filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands">
+        </plugin>
+        <plugin
+            filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster">
+        </plugin>
+        <plugin
+            filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+            <render_engine>ogre2</render_engine>
+        </plugin>
+
+        <scene>
+            <background>0 0 0 1</background>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <grid>false</grid>
+        </scene>
+
+        <!-- ============================================================ -->
+        <!-- GUI layout. Camera follow targets are set at runtime with     -->
+        <!-- ./camera.sh (CameraTracking listens on /gui/track)            -->
+        <!-- ============================================================ -->
+        <gui fullscreen="false">
+            <plugin filename="MinimalScene" name="3D View">
+                <gz-gui>
+                    <title>3D View</title>
+                    <property type="bool" key="showTitleBar">false</property>
+                    <property type="string" key="state">docked</property>
+                </gz-gui>
+                <engine>ogre2</engine>
+                <scene>scene</scene>
+                <ambient_light>0.4 0.4 0.4</ambient_light>
+                <background_color>0 0 0 1</background_color>
+                <!-- overview: behind the platform, looking at both exit paths -->
+                <camera_pose>-0.5 -0.5 0.6 0 0.545 0.785</camera_pose>
+                <camera_clip>
+                    <near>0.01</near>
+                    <far>5000</far>
+                </camera_clip>
+            </plugin>
+
+            <plugin filename="CameraTracking" name="Camera Tracking">
+                <gz-gui>
+                    <property key="resizable" type="bool">false</property>
+                    <property key="width" type="double">5</property>
+                    <property key="height" type="double">5</property>
+                    <property key="state" type="string">floating</property>
+                    <property key="showTitleBar" type="bool">false</property>
+                </gz-gui>
+            </plugin>
+
+            <!-- Faint 10 cm reference grid 0.3 m below the platform, so motion
+                 is visible while the camera follows a picosat. Visual only. -->
+            <plugin filename="GridConfig" name="Grid config">
+                <gz-gui>
+                    <property type="bool" key="showTitleBar">false</property>
+                    <property key="state" type="string">floating</property>
+                    <property key="width" type="double">5</property>
+                    <property key="height" type="double">5</property>
+                </gz-gui>
+                <insert>
+                    <horizontal_cell_count>200</horizontal_cell_count>
+                    <vertical_cell_count>0</vertical_cell_count>
+                    <cell_length>0.1</cell_length>
+                    <pose>0 0 -0.3 0 0 0</pose>
+                    <color>0.25 0.25 0.3 1</color>
+                </insert>
+            </plugin>
+
+            <plugin filename="EntityContextMenuPlugin" name="Entity context menu">
+                <gz-gui>
+                    <property key="state" type="string">floating</property>
+                    <property key="width" type="double">5</property>
+                    <property key="height" type="double">5</property>
+                    <property key="showTitleBar" type="bool">false</property>
+                </gz-gui>
+            </plugin>
+            <plugin filename="GzSceneManager" name="Scene Manager">
+                <gz-gui>
+                    <property key="resizable" type="bool">false</property>
+                    <property key="width" type="double">5</property>
+                    <property key="height" type="double">5</property>
+                    <property key="state" type="string">floating</property>
+                    <property key="showTitleBar" type="bool">false</property>
+                </gz-gui>
+            </plugin>
+            <plugin filename="InteractiveViewControl" name="Interactive view control">
+                <gz-gui>
+                    <property key="resizable" type="bool">false</property>
+                    <property key="width" type="double">5</property>
+                    <property key="height" type="double">5</property>
+                    <property key="state" type="string">floating</property>
+                    <property key="showTitleBar" type="bool">false</property>
+                </gz-gui>
+            </plugin>
+            <plugin filename="MarkerManager" name="Marker manager">
+                <gz-gui>
+                    <property key="resizable" type="bool">false</property>
+                    <property key="width" type="double">5</property>
+                    <property key="height" type="double">5</property>
+                    <property key="state" type="string">floating</property>
+                    <property key="showTitleBar" type="bool">false</property>
+                </gz-gui>
+            </plugin>
+            <plugin filename="SelectEntities" name="Select Entities">
+                <gz-gui>
+                    <property key="resizable" type="bool">false</property>
+                    <property key="width" type="double">5</property>
+                    <property key="height" type="double">5</property>
+                    <property key="state" type="string">floating</property>
+                    <property key="showTitleBar" type="bool">false</property>
+                </gz-gui>
+            </plugin>
+            <plugin filename="VisualizationCapabilities" name="Visualization Capabilities">
+                <gz-gui>
+                    <property key="resizable" type="bool">false</property>
+                    <property key="width" type="double">5</property>
+                    <property key="height" type="double">5</property>
+                    <property key="state" type="string">floating</property>
+                    <property key="showTitleBar" type="bool">false</property>
+                </gz-gui>
+            </plugin>
+
+            <plugin filename="WorldControl" name="World control">
+                <gz-gui>
+                    <title>World control</title>
+                    <property type="bool" key="showTitleBar">false</property>
+                    <property type="bool" key="resizable">false</property>
+                    <property type="double" key="height">72</property>
+                    <property type="double" key="z">1</property>
+                    <property type="string" key="state">floating</property>
+                    <anchors target="3D View">
+                        <line own="left" target="left"/>
+                        <line own="bottom" target="bottom"/>
+                    </anchors>
+                </gz-gui>
+                <play_pause>true</play_pause>
+                <step>true</step>
+                <start_paused>true</start_paused>
+                <use_event>true</use_event>
+            </plugin>
+
+            <plugin filename="WorldStats" name="World stats">
+                <gz-gui>
+                    <title>World stats</title>
+                    <property type="bool" key="showTitleBar">false</property>
+                    <property type="bool" key="resizable">false</property>
+                    <property type="double" key="height">110</property>
+                    <property type="double" key="width">290</property>
+                    <property type="double" key="z">1</property>
+                    <property type="string" key="state">floating</property>
+                    <anchors target="3D View">
+                        <line own="right" target="right"/>
+                        <line own="bottom" target="bottom"/>
+                    </anchors>
+                </gz-gui>
+                <sim_time>true</sim_time>
+                <real_time>true</real_time>
+                <real_time_factor>true</real_time_factor>
+                <iterations>true</iterations>
+            </plugin>
+
+            <plugin filename="Screenshot" name="Screenshot">
+                <gz-gui>
+                    <property key="resizable" type="bool">false</property>
+                    <property key="x" type="double">0</property>
+                    <property key="y" type="double">0</property>
+                    <property key="width" type="double">50</property>
+                    <property key="height" type="double">50</property>
+                    <property key="state" type="string">floating</property>
+                    <property key="showTitleBar" type="bool">false</property>
+                    <property key="cardBackground" type="string">#777777</property>
+                </gz-gui>
+            </plugin>
+
+            <plugin filename="ComponentInspector" name="Component inspector">
+                <gz-gui>
+                    <property type="bool" key="showTitleBar">false</property>
+                    <property type="string" key="state">docked</property>
+                </gz-gui>
+            </plugin>
+            <plugin filename="EntityTree" name="Entity tree">
+                <gz-gui>
+                    <property type="bool" key="showTitleBar">false</property>
+                    <property type="string" key="state">docked</property>
+                </gz-gui>
+            </plugin>
+        </gui>
+
+        <light type="directional" name="sun">
+            <cast_shadows>true</cast_shadows>
+            <pose>0 0 10 0 0 0</pose>
+            <diffuse>1 1 1 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <direction>-0.5 0.1 -0.9</direction>
+        </light>
+
+        <!-- ============================================================ -->
+        <!-- Deployment platform with the two pusher (ejector) plates      -->
+        <!-- ============================================================ -->
+        <model name="platform">
+            <pose>0 0 0 0 0 0</pose>
+
+            <!-- 6 in (0.1524 m) radius, 0.5 in thick, top face at z = 0 -->
+            <link name="base">
+                <pose>0 0 -0.00635 0 0 0</pose>
+                <inertial>
+                    <mass>5.0</mass>
+                    <inertia>
+                        <ixx>0.0291</ixx>
+                        <iyy>0.0291</iyy>
+                        <izz>0.0581</izz>
+                        <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+                    </inertia>
+                </inertial>
+                <collision name="collision">
+                    <geometry>
+                        <cylinder>
+                            <radius>0.1524</radius>
+                            <length>0.0127</length>
+                        </cylinder>
+                    </geometry>
+                </collision>
+                <visual name="visual">
+                    <geometry>
+                        <cylinder>
+                            <radius>0.1524</radius>
+                            <length>0.0127</length>
+                        </cylinder>
+                    </geometry>
+                    <material>
+                        <ambient>0.6 0.6 0.6 1</ambient>
+                        <diffuse>0.7 0.7 0.7 1</diffuse>
+                        <specular>0.3 0.3 0.3 1</specular>
+                    </material>
+                </visual>
+            </link>
+
+            <!-- Spin about the platform center; no recoil from the ejection -->
+            <joint name="platform_spin" type="revolute">
+                <parent>world</parent>
+                <child>base</child>
+                <axis>
+                    <xyz>0 0 1</xyz>
+                    <limit>
+                        <effort>1e6</effort>
+                    </limit>
+                </axis>
+            </joint>
+
+            <!-- Pusher A: behind picosat A, pushes along +X -->
+            <link name="pusher_a">
+                <pose>0.0538 0 0.0319 0 0 0</pose>
+                <inertial>
+                    <mass>0.05</mass>
+                    <inertia>
+                        <ixx>3.0e-5</ixx>
+                        <iyy>1.5e-5</iyy>
+                        <izz>1.5e-5</izz>
+                        <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+                    </inertia>
+                </inertial>
+                <collision name="collision">
+                    <geometry>
+                        <box><size>0.005 0.06 0.06</size></box>
+                    </geometry>
+                </collision>
+                <visual name="visual">
+                    <geometry>
+                        <box><size>0.005 0.06 0.06</size></box>
+                    </geometry>
+                    <material>
+                        <ambient>0.8 0.2 0.2 1</ambient>
+                        <diffuse>0.8 0.2 0.2 1</diffuse>
+                    </material>
+                </visual>
+            </link>
+            <joint name="pusher_a_joint" type="prismatic">
+                <parent>base</parent>
+                <child>pusher_a</child>
+                <axis>
+                    <xyz>1 0 0</xyz>
+                    <limit>
+                        <lower>0</lower>
+                        <upper>0.1011</upper>
+                        <effort>1e6</effort>
+                    </limit>
+                </axis>
+            </joint>
+
+            <!-- Pusher B: behind picosat B, pushes along +Y -->
+            <link name="pusher_b">
+                <pose>0 0.0538 0.0319 0 0 1.5707963</pose>
+                <inertial>
+                    <mass>0.05</mass>
+                    <inertia>
+                        <ixx>3.0e-5</ixx>
+                        <iyy>1.5e-5</iyy>
+                        <izz>1.5e-5</izz>
+                        <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+                    </inertia>
+                </inertial>
+                <collision name="collision">
+                    <geometry>
+                        <box><size>0.005 0.06 0.06</size></box>
+                    </geometry>
+                </collision>
+                <visual name="visual">
+                    <geometry>
+                        <box><size>0.005 0.06 0.06</size></box>
+                    </geometry>
+                    <material>
+                        <ambient>0.8 0.2 0.2 1</ambient>
+                        <diffuse>0.8 0.2 0.2 1</diffuse>
+                    </material>
+                </visual>
+            </link>
+            <joint name="pusher_b_joint" type="prismatic">
+                <parent>base</parent>
+                <child>pusher_b</child>
+                <axis>
+                    <xyz>1 0 0</xyz>
+                    <limit>
+                        <lower>0</lower>
+                        <upper>0.1011</upper>
+                        <effort>1e6</effort>
+                    </limit>
+                </axis>
+            </joint>
+
+            <!-- 0.0167 Hz = 0.1049 rad/s -->
+            <plugin
+                filename="gz-sim-joint-controller-system"
+                name="gz::sim::systems::JointController">
+                <joint_name>platform_spin</joint_name>
+                <initial_velocity>0.1049</initial_velocity>
+            </plugin>
+
+            <!-- Ejectors: idle until /eject sets their speed -->
+            <plugin
+                filename="gz-sim-joint-controller-system"
+                name="gz::sim::systems::JointController">
+                <joint_name>pusher_a_joint</joint_name>
+            </plugin>
+            <plugin
+                filename="gz-sim-joint-controller-system"
+                name="gz::sim::systems::JointController">
+                <joint_name>pusher_b_joint</joint_name>
+            </plugin>
+
+            <!-- Holds picosat_a to its pusher until release -->
+            <plugin
+                filename="gz-sim-detachable-joint-system"
+                name="gz::sim::systems::DetachableJoint">
+                <parent_link>pusher_a</parent_link>
+                <child_model>picosat_a</child_model>
+                <child_link>body</child_link>
+                <detach_topic>/picosat_a/detach</detach_topic>
+            </plugin>
+
+            <!-- Holds picosat_b to its pusher until release -->
+            <plugin
+                filename="gz-sim-detachable-joint-system"
+                name="gz::sim::systems::DetachableJoint">
+                <parent_link>pusher_b</parent_link>
+                <child_model>picosat_b</child_model>
+                <child_link>body</child_link>
+                <detach_topic>/picosat_b/detach</detach_topic>
+            </plugin>
+        </model>
+
+        <!-- ============================================================ -->
+        <!-- Picosats: 95.6 x 62.8 x 62.8 mm, 0.5 kg, long axis = local X  -->
+        <!-- Box inertia: Ixx = m(b^2+c^2)/12, Iyy = Izz = m(a^2+c^2)/12   -->
+        <!-- ============================================================ -->
+        <model name="picosat_a">
+            <!-- outer face at r = 0.1524, 0.5 mm above the platform -->
+            <pose>0.1046 0 0.0319 0 0 0</pose>
+            <link name="body">
+                <inertial>
+                    <mass>0.5</mass>
+                    <inertia>
+                        <ixx>3.2864e-4</ixx>
+                        <iyy>5.4513e-4</iyy>
+                        <izz>5.4513e-4</izz>
+                        <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+                    </inertia>
+                </inertial>
+                <collision name="collision">
+                    <geometry>
+                        <box><size>0.0956 0.0628 0.0628</size></box>
+                    </geometry>
+                </collision>
+                <visual name="visual">
+                    <geometry>
+                        <box><size>0.0956 0.0628 0.0628</size></box>
+                    </geometry>
+                    <material>
+                        <ambient>0.1 0.3 0.9 1</ambient>
+                        <diffuse>0.1 0.3 0.9 1</diffuse>
+                        <specular>0.5 0.5 0.5 1</specular>
+                    </material>
+                </visual>
+                <!-- Outward cameras, one 1 mm off each face. Named by the body axis
+                     they look along: px = +X (long axis, leading face). They
+                     only render while subscribed; see record_cameras.py. -->
+                <sensor name="cam_px" type="camera">
+                    <pose>0.0488 0 0 0 0 0</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_a/camera/px</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+                <sensor name="cam_nx" type="camera">
+                    <pose>-0.0488 0 0 0 0 3.1415927</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_a/camera/nx</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+                <sensor name="cam_py" type="camera">
+                    <pose>0 0.0324 0 0 0 1.5707963</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_a/camera/py</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+                <sensor name="cam_ny" type="camera">
+                    <pose>0 -0.0324 0 0 0 -1.5707963</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_a/camera/ny</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+                <sensor name="cam_pz" type="camera">
+                    <pose>0 0 0.0324 0 -1.5707963 0</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_a/camera/pz</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+                <sensor name="cam_nz" type="camera">
+                    <pose>0 0 -0.0324 0 1.5707963 0</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_a/camera/nz</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+            </link>
+            <plugin
+                filename="gz-sim-odometry-publisher-system"
+                name="gz::sim::systems::OdometryPublisher">
+                <dimensions>3</dimensions>
+                <odom_publish_frequency>50</odom_publish_frequency>
+            </plugin>
+        </model>
+
+        <model name="picosat_b">
+            <!-- 90 deg around the platform from picosat A -->
+            <pose>0 0.1046 0.0319 0 0 1.5707963</pose>
+            <link name="body">
+                <inertial>
+                    <mass>0.5</mass>
+                    <inertia>
+                        <ixx>3.2864e-4</ixx>
+                        <iyy>5.4513e-4</iyy>
+                        <izz>5.4513e-4</izz>
+                        <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+                    </inertia>
+                </inertial>
+                <collision name="collision">
+                    <geometry>
+                        <box><size>0.0956 0.0628 0.0628</size></box>
+                    </geometry>
+                </collision>
+                <visual name="visual">
+                    <geometry>
+                        <box><size>0.0956 0.0628 0.0628</size></box>
+                    </geometry>
+                    <material>
+                        <ambient>0.9 0.6 0.1 1</ambient>
+                        <diffuse>0.9 0.6 0.1 1</diffuse>
+                        <specular>0.5 0.5 0.5 1</specular>
+                    </material>
+                </visual>
+                <!-- Outward cameras, one 1 mm off each face. Named by the body axis
+                     they look along: px = +X (long axis, leading face). They
+                     only render while subscribed; see record_cameras.py. -->
+                <sensor name="cam_px" type="camera">
+                    <pose>0.0488 0 0 0 0 0</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_b/camera/px</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+                <sensor name="cam_nx" type="camera">
+                    <pose>-0.0488 0 0 0 0 3.1415927</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_b/camera/nx</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+                <sensor name="cam_py" type="camera">
+                    <pose>0 0.0324 0 0 0 1.5707963</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_b/camera/py</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+                <sensor name="cam_ny" type="camera">
+                    <pose>0 -0.0324 0 0 0 -1.5707963</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_b/camera/ny</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+                <sensor name="cam_pz" type="camera">
+                    <pose>0 0 0.0324 0 -1.5707963 0</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_b/camera/pz</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+                <sensor name="cam_nz" type="camera">
+                    <pose>0 0 -0.0324 0 1.5707963 0</pose>
+                    <always_on>true</always_on>
+                    <update_rate>10</update_rate>
+                    <topic>/picosat_b/camera/nz</topic>
+                    <camera>
+                        <horizontal_fov>1.5708</horizontal_fov>
+                        <image>
+                            <width>640</width>
+                            <height>480</height>
+                            <format>R8G8B8</format>
+                        </image>
+                        <clip>
+                            <near>0.001</near>
+                            <far>1000</far>
+                        </clip>
+                    </camera>
+                </sensor>
+            </link>
+            <plugin
+                filename="gz-sim-odometry-publisher-system"
+                name="gz::sim::systems::OdometryPublisher">
+                <dimensions>3</dimensions>
+                <odom_publish_frequency>50</odom_publish_frequency>
+            </plugin>
+        </model>
+
+        <!-- ============================================================ -->
+        <!-- Ejection sequence, started by a message on /eject             -->
+        <!-- ============================================================ -->
+        <plugin
+            filename="gz-sim-triggered-publisher-system"
+            name="gz::sim::systems::TriggeredPublisher">
+            <input type="gz.msgs.Empty" topic="/eject"/>
+            <output type="gz.msgs.Double" topic="/model/platform/joint/pusher_a_joint/cmd_vel">data: 0.127</output>
+            <output type="gz.msgs.Double" topic="/model/platform/joint/pusher_b_joint/cmd_vel">data: 0.127</output>
+        </plugin>
+        <!-- 95.6 mm at 5 in/s = 753 ms -->
+        <plugin
+            filename="gz-sim-triggered-publisher-system"
+            name="gz::sim::systems::TriggeredPublisher">
+            <input type="gz.msgs.Empty" topic="/eject"/>
+            <delay_ms>753</delay_ms>
+            <output type="gz.msgs.Empty" topic="/picosat_a/detach"/>
+            <output type="gz.msgs.Empty" topic="/picosat_b/detach"/>
+        </plugin>
+    </world>
+</sdf>
